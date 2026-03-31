@@ -1,0 +1,329 @@
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0d0d0d;
+  color: #e8e8e8;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   OVERLAYS (start / end screens)
+   ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 100;
+  padding: 24px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 22px;
+  padding: 44px 48px;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+}
+
+.card h1 {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: #fff;
+  margin-bottom: 14px;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: #bbb;
+  margin-bottom: 8px;
+  line-height: 1.55;
+}
+
+.hint {
+  font-size: 0.84rem;
+  color: #555;
+  margin-bottom: 32px;
+  line-height: 1.65;
+}
+
+/* End screen score display */
+.big-score {
+  font-size: clamp(3.5rem, 14vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #fff;
+  margin: 10px 0 4px;
+  line-height: 1;
+}
+
+.score-unit {
+  font-size: 0.82rem;
+  color: #555;
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#final-detail {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 28px;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn-primary {
+  display: inline-block;
+  padding: 14px 40px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: opacity 150ms, transform 150ms;
+}
+
+.btn-primary:hover  { opacity: 0.86; transform: translateY(-1px); }
+.btn-primary:active { opacity: 0.72; transform: translateY(0); }
+
+/* ============================================================
+   GAME UI SHELL
+   ============================================================ */
+#game-ui {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh; /* fallback */
+}
+
+#game-ui.hidden { display: none; }
+
+/* ── HUD ── */
+#hud {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 13px 22px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+#home-link {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #fff;
+  text-decoration: none;
+  transition: color 150ms;
+  white-space: nowrap;
+}
+
+#home-link:hover { color: #aaa; }
+
+#round-display {
+  text-align: center;
+}
+
+#score-display {
+  text-align: right;
+}
+
+/* ── Canvas area ── */
+#canvas-wrapper {
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: stretch;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  /* Border glow is animated via box-shadow on the wrapper states below */
+  transition: box-shadow 220ms ease;
+}
+
+/* Result border glow — color lives here, NOT on the canvas content */
+#canvas-wrapper.reveal-hit #game-canvas {
+  box-shadow:
+    0 0 0 2px #4ade80,
+    0 0 40px rgba(74, 222, 128, 0.20);
+}
+
+#canvas-wrapper.reveal-miss #game-canvas {
+  box-shadow:
+    0 0 0 2px #f87171,
+    0 0 40px rgba(248, 113, 113, 0.20);
+}
+
+/* ── Feedback bar ── */
+#feedback-bar {
+  flex-shrink: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  /* Subtle background tint driven by state class */
+  transition: background-color 200ms ease;
+}
+
+#feedback-bar.good { background: rgba(74, 222, 128, 0.06); }
+#feedback-bar.ok   { background: rgba(250, 204,  21, 0.06); }
+#feedback-bar.miss { background: rgba(248, 113, 113, 0.07); }
+
+#feedback-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: transparent; /* default: invisible placeholder */
+  animation: none;
+}
+
+/* Animated pop when content changes */
+#feedback-text.good,
+#feedback-text.ok,
+#feedback-text.miss {
+  animation: feedPop 0.18s ease-out forwards;
+}
+
+#feedback-text.good { color: #4ade80; }
+#feedback-text.ok   { color: #facc15; }
+#feedback-text.miss { color: #f87171; }
+
+@keyframes feedPop {
+  from { transform: scale(0.80); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ============================================================
+   SAFE AREA INSETS (notched / home-bar phones)
+   ============================================================ */
+#hud {
+  padding-top:    max(13px, env(safe-area-inset-top));
+  padding-left:   max(22px, env(safe-area-inset-left));
+  padding-right:  max(22px, env(safe-area-inset-right));
+}
+
+#canvas-wrapper {
+  padding-left:  max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+#feedback-bar {
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+}
+
+.overlay {
+  padding-top:    max(24px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding-left:   max(24px, env(safe-area-inset-left));
+  padding-right:  max(24px, env(safe-area-inset-right));
+}
+
+/* ============================================================
+   MOBILE  (≤ 480px wide — phones in portrait)
+   ============================================================ */
+@media (max-width: 480px) {
+  .card {
+    padding: 28px 22px;
+    border-radius: 18px;
+  }
+
+  .card h1       { margin-bottom: 10px; }
+  .hint          { margin-bottom: 24px; }
+  #final-detail  { margin-bottom: 22px; }
+
+  .btn-primary {
+    padding: 13px 32px;
+    font-size: 0.9rem;
+  }
+
+  #hud {
+    padding-top:    max(10px, env(safe-area-inset-top));
+    padding-left:   max(14px, env(safe-area-inset-left));
+    padding-right:  max(14px, env(safe-area-inset-right));
+    padding-bottom: 10px;
+    font-size: 0.68rem;
+  }
+
+  #home-link { font-size: 0.75rem; }
+
+  #canvas-wrapper {
+    padding-left:  max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  #game-canvas   { border-radius: 10px; }
+
+  #feedback-bar  {
+    height: auto;
+    min-height: 44px;
+    padding-top: 8px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  #feedback-text { font-size: 0.88rem; }
+}
+
+/* ============================================================
+   LANDSCAPE PHONES  (short viewport — give canvas max space)
+   ============================================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+  #hud {
+    padding-top:    max(6px, env(safe-area-inset-top));
+    padding-bottom: 6px;
+    font-size: 0.68rem;
+  }
+
+  #canvas-wrapper {
+    padding-left:  max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  #feedback-bar {
+    height: auto;
+    min-height: 36px;
+    padding-top: 4px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  #feedback-text { font-size: 0.8rem; }
+
+  .card { padding: 22px 28px; }
+}

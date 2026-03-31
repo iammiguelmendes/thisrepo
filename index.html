@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Shade Line</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ── Start Screen ── -->
+  <div id="start-screen" class="overlay">
+    <div class="card">
+      <h1>Shade Line</h1>
+      <p class="tagline">Two regions. Same hue. A barely visible divide.</p>
+      <p class="hint">Click where you think the dividing line is.<br>20 rounds. Trust your eyes.</p>
+      <button id="start-btn" class="btn-primary">Start Game</button>
+    </div>
+  </div>
+
+  <!-- ── End Screen ── -->
+  <div id="end-screen" class="overlay hidden">
+    <div class="card">
+      <h1>Done</h1>
+      <div class="big-score" id="final-score">0</div>
+      <p class="score-unit">out of 100</p>
+      <p class="tagline" id="final-grade">—</p>
+      <p id="final-detail"></p>
+      <button id="restart-btn" class="btn-primary">Play Again</button>
+    </div>
+  </div>
+
+  <!-- ── Game UI ── -->
+  <div id="game-ui" class="hidden">
+    <div id="hud">
+      <a id="home-link" href="index.html" title="Back to home">Shade Line</a>
+      <span id="round-display">Round 1 / 20</span>
+      <span id="score-display">Score: 0</span>
+    </div>
+    <div id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <div id="feedback-bar">
+      <span id="feedback-text">&nbsp;</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
