@@ -27,11 +27,11 @@ const TOTAL_ROUNDS    = 20;
 const REVEAL_DURATION = 1100; // ms to show the reveal before advancing
 
 // Lightness delta between the two shade regions.
-const MAX_DELTA = 6;    // starting shade diff is already tight
+const MAX_DELTA = 6.4;  // opening rounds are slightly more forgiving
 const MIN_DELTA = 0.4;  // at peak difficulty: essentially imperceptible
 
 // Tolerance: max horizontal px distance from the line that counts as a hit.
-const BASE_TOLERANCE = 36;
+const BASE_TOLERANCE = 38;
 const MIN_TOLERANCE  = 12;
 
 // Soft gradient blend width at boundary (px) — just enough to kill the hard edge.
@@ -39,7 +39,7 @@ const BLEND_WIDTH = 3;
 
 // ── Game state ────────────────────────────────────────────────
 let round        = 0;
-let difficulty   = 0.70;
+let difficulty   = 0.64;
 let totalPoints  = 0;
 let correctCount = 0;
 let wrongCount   = 0;
@@ -53,13 +53,13 @@ let streak = 0;
 function updateDifficulty(wasHit) {
   // Every correct answer pushes difficulty up; a miss pulls it back.
   difficulty = wasHit
-    ? Math.min(1, difficulty + 0.03)
+    ? Math.min(1, difficulty + 0.02)
     : Math.max(0, difficulty - 0.05);
 
-  // Streak bonus: 4 correct in a row → extra nudge up
+  // Streak bonus: 5 correct in a row → extra nudge up
   streak = wasHit ? Math.max(0, streak) + 1 : Math.min(0, streak) - 1;
-  if (streak >= 4) {
-    difficulty = Math.min(1, difficulty + 0.03);
+  if (streak >= 5) {
+    difficulty = Math.min(1, difficulty + 0.02);
     streak = 0;
   } else if (streak <= -3) {
     difficulty = Math.max(0, difficulty - 0.08);
@@ -96,6 +96,11 @@ function incrementPlayCount() {
   localStorage.setItem("sl_plays", String(getPlayCount() + 1));
 }
 
+function shouldAutoStart() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("autostart") === "1";
+}
+
 // ── Start overlay best-score display ─────────────────────────
 function updateStartBest() {
   const best = getBestScore();
@@ -108,8 +113,8 @@ function updateStartBest() {
 // ── Game flow ─────────────────────────────────────────────────
 function startGame() {
   round        = 0;
-  // Slightly harder starting point on repeat plays (capped at 0.80)
-  difficulty   = Math.min(0.80, 0.70 + getPlayCount() * 0.015);
+  // Repeat plays still start a bit harder, but ramp more gently.
+  difficulty   = Math.min(0.76, 0.64 + getPlayCount() * 0.01);
   totalPoints  = 0;
   correctCount = 0;
   wrongCount   = 0;
@@ -507,17 +512,20 @@ function cssH() { return canvas.height / (window.devicePixelRatio || 1); }
 function resizeCanvas() {
   const wrapper = document.getElementById("canvas-wrapper");
   const rect    = wrapper.getBoundingClientRect();
+  if (!rect.width || !rect.height) return false;
+
   const dpr     = window.devicePixelRatio || 1;
   canvas.width        = Math.round(rect.width  * dpr);
   canvas.height       = Math.round(rect.height * dpr);
   canvas.style.width  = rect.width  + "px";
   canvas.style.height = rect.height + "px";
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return true;
 }
 
 window.addEventListener("resize", () => {
   if (gameUI.classList.contains("hidden")) return;
-  resizeCanvas();
+  if (!resizeCanvas()) return;
   if (currentRound) {
     currentRound.W = cssW();
     currentRound.H = cssH();
@@ -536,3 +544,12 @@ downloadCardBtn.addEventListener("click", downloadScoreCard);
 
 // ── Init ──────────────────────────────────────────────────────
 updateStartBest();
+
+if (shouldAutoStart()) {
+  const boot = () => startGame();
+  if (document.readyState === "complete") {
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener("load", boot, { once: true });
+  }
+}

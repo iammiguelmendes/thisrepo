@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Play – Shade Line</title>
   <meta name="description" content="Test your color perception. Find the invisible boundary between two nearly identical shades — 20 adaptive rounds." />
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('autostart') === '1') {
+        document.documentElement.classList.add('autostart-game');
+      }
+    }());
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="page-game">
