@@ -125,11 +125,14 @@ body {
 }
 
 .site-logo {
-  color: #fff;
   font-weight: 700;
   font-size: 0.9rem;
   text-decoration: none;
   letter-spacing: 0.01em;
+  background: linear-gradient(120deg, #a78bfa 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .site-nav {
@@ -148,8 +151,15 @@ body {
   transition: color 150ms;
 }
 
-.site-nav a:hover          { color: var(--text); }
-.site-nav a[aria-current]  { color: #fff; }
+.site-nav a:hover { color: var(--text); }
+
+.site-nav a[aria-current],
+.site-nav .nav-play {
+  background: linear-gradient(120deg, #a78bfa 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
 /* ============================================================
    BUTTONS
@@ -299,10 +309,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1.08;
-  background: linear-gradient(120deg, #a78bfa 0%, #60a5fa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #fff;
   margin-bottom: 20px;
 }
 
@@ -662,10 +669,24 @@ body.page-game {
 
 .end-actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 14px;
-  flex-wrap: wrap;
+}
+
+.end-actions-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.end-actions-secondary .btn-secondary {
+  width: 100%;
+  text-align: center;
+}
+
+#restart-btn {
+  width: 100%;
 }
 
 .end-back-link {
@@ -859,12 +880,9 @@ body.page-game {
 
   .site-nav .nav-about { display: none; }
 
-  .end-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .end-actions-secondary {
+    grid-template-columns: 1fr;
   }
-
-  .end-actions button { width: 100%; }
 
   .end-card { max-width: 100%; }
 
