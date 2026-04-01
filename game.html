@@ -46,18 +46,36 @@
     <!-- End Overlay -->
     <div id="end-overlay" class="section-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="end-title">
       <div class="card end-card">
-        <h2 id="end-title" class="sr-only">Game over — your results</h2>
+        <p class="end-kicker">Your Results</p>
+        <h2 id="end-title" class="end-title">Shade Line</h2>
 
-        <!-- Score card preview (canvas drawn by JS, used for copy/download) -->
-        <canvas id="score-card-canvas" class="score-card-preview" aria-label="Your score card"></canvas>
+        <div class="end-score-block" aria-live="polite">
+          <div class="end-score-value"><span id="end-score-value">0</span><span class="end-score-total">/ 100</span></div>
+          <p id="end-grade-message" class="end-grade-message">Solid. Respectable perception.</p>
+        </div>
 
-        <!-- Badges below the preview -->
         <div id="new-record-badge" class="new-record hidden" aria-live="polite">New best!</div>
         <div id="best-score-end" class="best-score-row hidden">
           Best: <strong id="end-best-value">—</strong>
         </div>
 
-        <!-- Three actions -->
+        <div class="end-stats" aria-label="Game stats">
+          <div class="end-stat">
+            <span class="end-stat-label">Correct</span>
+            <strong id="end-correct-value" class="end-stat-value">0</strong>
+          </div>
+          <div class="end-stat">
+            <span class="end-stat-label">Missed</span>
+            <strong id="end-missed-value" class="end-stat-value">0</strong>
+          </div>
+          <div class="end-stat">
+            <span class="end-stat-label">Rounds</span>
+            <strong id="end-rounds-value" class="end-stat-value">20</strong>
+          </div>
+        </div>
+
+        <canvas id="score-card-canvas" class="score-card-preview hidden" aria-hidden="true"></canvas>
+
         <div class="end-actions" role="group" aria-label="Score card actions">
           <button id="copy-card-btn"     class="btn-secondary" type="button">Copy Image</button>
           <button id="download-card-btn" class="btn-secondary" type="button">Save PNG</button>

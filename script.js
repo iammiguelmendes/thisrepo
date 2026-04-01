@@ -11,6 +11,11 @@ const endOverlay       = document.getElementById("end-overlay");
 const newRecordBadge   = document.getElementById("new-record-badge");
 const bestScoreEnd     = document.getElementById("best-score-end");
 const endBestValue     = document.getElementById("end-best-value");
+const endScoreValue    = document.getElementById("end-score-value");
+const endGradeMessage  = document.getElementById("end-grade-message");
+const endCorrectValue  = document.getElementById("end-correct-value");
+const endMissedValue   = document.getElementById("end-missed-value");
+const endRoundsValue   = document.getElementById("end-rounds-value");
 const scoreCardCanvas  = document.getElementById("score-card-canvas");
 const copyCardBtn      = document.getElementById("copy-card-btn");
 const downloadCardBtn  = document.getElementById("download-card-btn");
@@ -31,8 +36,7 @@ const MAX_DELTA = 6.4;  // opening rounds are slightly more forgiving
 const MIN_DELTA = 0.4;  // at peak difficulty: essentially imperceptible
 
 // Tolerance: max horizontal px distance from the line that counts as a hit.
-const BASE_TOLERANCE = 38;
-const MIN_TOLERANCE  = 12;
+const HIT_TOLERANCE = 15;
 
 // Soft gradient blend width at boundary (px) — just enough to kill the hard edge.
 const BLEND_WIDTH = 3;
@@ -72,7 +76,7 @@ function shadeDelta() {
 }
 
 function tolerance() {
-  return BASE_TOLERANCE - difficulty * (BASE_TOLERANCE - MIN_TOLERANCE);
+  return HIT_TOLERANCE;
 }
 
 // ── localStorage helpers ──────────────────────────────────────
@@ -146,8 +150,14 @@ function endGame() {
   const pct        = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
   const isNewBest  = saveBestScore(pct);
 
-  // Build and display the score card preview
-  renderScoreCardPreview(pct, isNewBest);
+  endScoreValue.textContent   = String(pct);
+  endGradeMessage.textContent = gradeMessage(pct);
+  endCorrectValue.textContent = String(correctCount);
+  endMissedValue.textContent  = String(wrongCount);
+  endRoundsValue.textContent  = String(TOTAL_ROUNDS);
+
+  // Keep the score card available for copy/download, but do not show it as the main UI.
+  renderScoreCardPreview(pct);
 
   if (isNewBest) {
     newRecordBadge.classList.remove("hidden");

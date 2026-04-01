@@ -463,18 +463,98 @@ body.page-game {
   margin-bottom: 20px;
 }
 
-/* End card — wider to hold score card preview */
+/* End card */
 .end-card {
   max-width: 500px;
 }
 
-/* ── Score card preview canvas ── */
-.score-card-preview {
-  width: 100%;
-  height: auto;
-  border-radius: 10px;
-  display: block;
+.end-kicker {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.end-title {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #fff;
+  margin-bottom: 18px;
+}
+
+.end-score-block {
+  padding: 28px 24px 24px;
   margin-bottom: 14px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.end-score-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#end-score-value {
+  font-size: clamp(4rem, 12vw, 5.6rem);
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #fff;
+}
+
+.end-score-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.end-grade-message {
+  font-size: 1rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.end-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.end-stat {
+  padding: 16px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.end-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.end-stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.score-card-preview {
+  width: 0;
+  height: 0;
+  display: block;
 }
 
 /* ── End card details ── */
@@ -691,6 +771,10 @@ body.page-game {
   .end-actions button { width: 100%; }
 
   .end-card { max-width: 100%; }
+
+  .end-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============================================================
