@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Play – Shade Line</title>
+  <meta name="description" content="Test your color perception. Find the invisible boundary between two nearly identical shades — 20 adaptive rounds." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="page-game">
+
+  <a href="#game-canvas" class="skip-link">Skip to game</a>
+
+  <!-- ── Fixed Header ── -->
+  <header id="site-header">
+    <a href="index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="game.html" aria-current="page">Play</a>
+      <a href="about.html" class="nav-about">About</a>
+    </nav>
+  </header>
+
+  <!-- ── Game Section ── -->
+  <main id="game-section" aria-label="Game">
+
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="section-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
+      <div class="card start-card">
+        <h1 id="start-title" class="start-title">Shade Line</h1>
+        <p class="start-sub">20 rounds of color perception</p>
+        <div id="start-best-banner" class="best-score-banner hidden" aria-live="polite">
+          Personal best: <strong id="start-best-value">—</strong>
+        </div>
+        <button id="start-btn" class="btn-primary btn-large" type="button">Start Game</button>
+      </div>
+    </div>
+
+    <!-- End Overlay -->
+    <div id="end-overlay" class="section-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <div class="card end-card">
+        <h2 id="end-title" class="sr-only">Game over — your results</h2>
+
+        <!-- Score card preview (canvas drawn by JS, used for copy/download) -->
+        <canvas id="score-card-canvas" class="score-card-preview" aria-label="Your score card"></canvas>
+
+        <!-- Badges below the preview -->
+        <div id="new-record-badge" class="new-record hidden" aria-live="polite">New best!</div>
+        <div id="best-score-end" class="best-score-row hidden">
+          Best: <strong id="end-best-value">—</strong>
+        </div>
+
+        <!-- Three actions -->
+        <div class="end-actions" role="group" aria-label="Score card actions">
+          <button id="copy-card-btn"     class="btn-secondary" type="button">Copy Image</button>
+          <button id="download-card-btn" class="btn-secondary" type="button">Save PNG</button>
+          <button id="restart-btn"       class="btn-primary"   type="button">Try Again</button>
+        </div>
+
+        <a href="index.html" class="end-back-link">← Back to home</a>
+      </div>
+    </div>
+
+    <!-- Game UI (hidden until game starts) -->
+    <div id="game-ui" class="hidden">
+      <div id="hud" role="status" aria-live="polite" aria-atomic="true">
+        <span></span><!-- spacer keeps round centred -->
+        <span id="round-display">Round 1 / 20</span>
+        <span id="score-display">Score: 0</span>
+      </div>
+
+      <div id="canvas-wrapper">
+        <canvas
+          id="game-canvas"
+          aria-label="Game area — click where you think the shade boundary is"
+          role="img"
+        ></canvas>
+      </div>
+
+      <div id="feedback-bar" aria-live="polite" aria-atomic="true">
+        <span id="feedback-text">&nbsp;</span>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

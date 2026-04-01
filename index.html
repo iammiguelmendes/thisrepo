@@ -3,48 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Shade Line</title>
+  <title>Shade Line – Color Perception Test</title>
+  <meta name="description" content="Can you find the invisible boundary between two nearly identical color shades? Test your color perception in 20 rounds with adaptive difficulty. Free online visual challenge." />
+  <meta property="og:title" content="Shade Line – Color Perception Test" />
+  <meta property="og:description" content="Find the invisible line between two nearly identical shades. Test your color perception and visual precision in 20 rounds." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Shade Line – Color Perception Test" />
+  <meta name="twitter:description" content="Can you find the invisible boundary between two nearly identical color shades? Free online visual challenge." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- ── Start Screen ── -->
-  <div id="start-screen" class="overlay">
-    <div class="card">
-      <h1>Shade Line</h1>
-      <p class="tagline">Two regions. Same hue. A barely visible divide.</p>
-      <p class="hint">Click where you think the dividing line is.<br>20 rounds. Trust your eyes.</p>
-      <button id="start-btn" class="btn-primary">Start Game</button>
-    </div>
-  </div>
+  <!-- Skip navigation for keyboard/screen-reader users -->
+  <a href="#main-content" class="skip-link">Skip to content</a>
 
-  <!-- ── End Screen ── -->
-  <div id="end-screen" class="overlay hidden">
-    <div class="card">
-      <h1>Done</h1>
-      <div class="big-score" id="final-score">0</div>
-      <p class="score-unit">out of 100</p>
-      <p class="tagline" id="final-grade">—</p>
-      <p id="final-detail"></p>
-      <button id="restart-btn" class="btn-primary">Play Again</button>
-    </div>
-  </div>
+  <!-- ── Fixed Header ── -->
+  <header id="site-header">
+    <a href="index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="game.html">Play</a>
+      <a href="about.html" class="nav-about">About</a>
+    </nav>
+  </header>
 
-  <!-- ── Game UI ── -->
-  <div id="game-ui" class="hidden">
-    <div id="hud">
-      <a id="home-link" href="index.html" title="Back to home">Shade Line</a>
-      <span id="round-display">Round 1 / 20</span>
-      <span id="score-display">Score: 0</span>
-    </div>
-    <div id="canvas-wrapper">
-      <canvas id="game-canvas"></canvas>
-    </div>
-    <div id="feedback-bar">
-      <span id="feedback-text">&nbsp;</span>
-    </div>
-  </div>
+  <!-- ── Landing / Hero ── -->
+  <main id="main-content">
+    <section id="landing" aria-label="Hero">
 
-  <script src="script.js"></script>
+      <div class="hero-content">
+        <p class="hero-label">Color Perception Test</p>
+        <h1>Can you find<br>the invisible line?</h1>
+        <p class="hero-sub">
+          Two regions. Same hue. A barely visible divide between two nearly
+          identical shades. Your job is to click exactly where they meet.
+        </p>
+
+        <!-- Best score — shown only if localStorage has a value (set by inline script below) -->
+        <div id="best-score-landing" class="best-score-banner hidden" aria-live="polite">
+          Personal best: <strong id="landing-best-value">—</strong>
+        </div>
+
+        <a href="game.html" class="btn-primary btn-large" role="button">Test Your Vision →</a>
+        <p class="hero-disclaimer">Free · No signup · 20 rounds</p>
+      </div>
+
+      <!-- How it works -->
+      <div class="how-section" aria-labelledby="how-heading">
+        <h2 id="how-heading">How it works</h2>
+        <div class="steps">
+          <div class="step">
+            <p class="step-num" aria-hidden="true">01</p>
+            <h3>Two shades appear</h3>
+            <p>The canvas splits into two regions of the same hue — subtly different in lightness. No visible line marks the boundary.</p>
+          </div>
+          <div class="step">
+            <p class="step-num" aria-hidden="true">02</p>
+            <h3>Click the boundary</h3>
+            <p>Click where you think the invisible line is. The closer to the real boundary, the more points you earn.</p>
+          </div>
+          <div class="step">
+            <p class="step-num" aria-hidden="true">03</p>
+            <h3>It adapts to you</h3>
+            <p>Get it right and the shades grow more similar — harder to tell apart. Miss and it eases off.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer id="site-footer">
+    <span class="footer-logo">Shade Line</span>
+    <span class="footer-copy">A color perception test. Free to play.</span>
+  </footer>
+
+  <!-- Inline: show best score from localStorage without a flash -->
+  <script>
+    (function () {
+      var best = parseFloat(localStorage.getItem('sl_best') || '0');
+      if (best > 0) {
+        document.getElementById('landing-best-value').textContent = Math.round(best) + ' / 100';
+        document.getElementById('best-score-landing').classList.remove('hidden');
+      }
+    }());
+  </script>
+
 </body>
 </html>

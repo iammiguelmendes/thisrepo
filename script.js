@@ -1,30 +1,32 @@
 // ============================================================
-// SHADE LINE — Perception Game
+// SHADE LINE — Game Logic  (game.html only)
 // ============================================================
 
 // ── DOM refs ──────────────────────────────────────────────────
-const startScreen  = document.getElementById("start-screen");
-const endScreen    = document.getElementById("end-screen");
-const gameUI       = document.getElementById("game-ui");
-const canvas       = document.getElementById("game-canvas");
-const ctx          = canvas.getContext("2d");
-const roundDisplay = document.getElementById("round-display");
-const scoreDisplay = document.getElementById("score-display");
-const feedbackText = document.getElementById("feedback-text");
-const feedbackBar  = document.getElementById("feedback-bar");
-const finalScore   = document.getElementById("final-score");
-const finalGrade   = document.getElementById("final-grade");
-const finalDetail  = document.getElementById("final-detail");
-
-document.getElementById("start-btn").addEventListener("click", startGame);
-document.getElementById("restart-btn").addEventListener("click", startGame);
+const startOverlay     = document.getElementById("start-overlay");
+const startBtn         = document.getElementById("start-btn");
+const startBestBanner  = document.getElementById("start-best-banner");
+const startBestValue   = document.getElementById("start-best-value");
+const endOverlay       = document.getElementById("end-overlay");
+const newRecordBadge   = document.getElementById("new-record-badge");
+const bestScoreEnd     = document.getElementById("best-score-end");
+const endBestValue     = document.getElementById("end-best-value");
+const scoreCardCanvas  = document.getElementById("score-card-canvas");
+const copyCardBtn      = document.getElementById("copy-card-btn");
+const downloadCardBtn  = document.getElementById("download-card-btn");
+const gameUI           = document.getElementById("game-ui");
+const canvas           = document.getElementById("game-canvas");
+const ctx              = canvas.getContext("2d");
+const roundDisplay     = document.getElementById("round-display");
+const scoreDisplay     = document.getElementById("score-display");
+const feedbackText     = document.getElementById("feedback-text");
+const feedbackBar      = document.getElementById("feedback-bar");
 
 // ── Constants ─────────────────────────────────────────────────
 const TOTAL_ROUNDS    = 20;
 const REVEAL_DURATION = 1100; // ms to show the reveal before advancing
 
 // Lightness delta between the two shade regions.
-// Larger = more obvious; smaller = harder.
 const MAX_DELTA = 6;    // starting shade diff is already tight
 const MIN_DELTA = 0.4;  // at peak difficulty: essentially imperceptible
 
@@ -32,36 +34,29 @@ const MIN_DELTA = 0.4;  // at peak difficulty: essentially imperceptible
 const BASE_TOLERANCE = 36;
 const MIN_TOLERANCE  = 12;
 
-// Width of the soft gradient blend at the boundary (CSS px).
-// Just wide enough to remove the hard aliased edge — not a visible cue.
+// Soft gradient blend width at boundary (px) — just enough to kill the hard edge.
 const BLEND_WIDTH = 3;
 
 // ── Game state ────────────────────────────────────────────────
 let round        = 0;
-let difficulty   = 0.70;   // 0 = easiest, 1 = hardest — start already hard
-let totalPoints  = 0;      // weighted score accumulator
+let difficulty   = 0.70;
+let totalPoints  = 0;
 let correctCount = 0;
 let wrongCount   = 0;
 let waiting      = false;
 let currentRound = null;
+let lastHue      = 220; // tracked for the score card background tint
 
 // ── Adaptive difficulty ───────────────────────────────────────
-// Uses both a streak counter (fast response) and a rolling average (smoothing).
-let streak = 0;  // positive = consecutive hits, negative = consecutive misses
-const PERF_WINDOW = 5;
-const perfHistory = [];
+let streak = 0;
 
 function updateDifficulty(wasHit) {
-  // Every correct answer pushes difficulty up immediately.
-  // A miss pulls it back a little — but less than a hit raises it,
-  // so sustained performance keeps the pressure on.
-  if (wasHit) {
-    difficulty = Math.min(1, difficulty + 0.03);
-  } else {
-    difficulty = Math.max(0, difficulty - 0.05);
-  }
+  // Every correct answer pushes difficulty up; a miss pulls it back.
+  difficulty = wasHit
+    ? Math.min(1, difficulty + 0.03)
+    : Math.max(0, difficulty - 0.05);
 
-  // Streak bonus: 4 correct in a row → gentle extra nudge
+  // Streak bonus: 4 correct in a row → extra nudge up
   streak = wasHit ? Math.max(0, streak) + 1 : Math.min(0, streak) - 1;
   if (streak >= 4) {
     difficulty = Math.min(1, difficulty + 0.03);
@@ -80,22 +75,53 @@ function tolerance() {
   return BASE_TOLERANCE - difficulty * (BASE_TOLERANCE - MIN_TOLERANCE);
 }
 
+// ── localStorage helpers ──────────────────────────────────────
+function getBestScore() {
+  return parseFloat(localStorage.getItem("sl_best") || "0");
+}
+
+function saveBestScore(score) {
+  if (score > getBestScore()) {
+    localStorage.setItem("sl_best", String(score));
+    return true;
+  }
+  return false;
+}
+
+function getPlayCount() {
+  return parseInt(localStorage.getItem("sl_plays") || "0");
+}
+
+function incrementPlayCount() {
+  localStorage.setItem("sl_plays", String(getPlayCount() + 1));
+}
+
+// ── Start overlay best-score display ─────────────────────────
+function updateStartBest() {
+  const best = getBestScore();
+  if (best > 0 && startBestBanner) {
+    startBestValue.textContent = Math.round(best) + " / 100";
+    startBestBanner.classList.remove("hidden");
+  }
+}
+
 // ── Game flow ─────────────────────────────────────────────────
 function startGame() {
   round        = 0;
-  difficulty   = 0.70;
+  // Slightly harder starting point on repeat plays (capped at 0.80)
+  difficulty   = Math.min(0.80, 0.70 + getPlayCount() * 0.015);
   totalPoints  = 0;
   correctCount = 0;
   wrongCount   = 0;
   waiting      = false;
   currentRound = null;
   streak       = 0;
-  perfHistory.length = 0;
 
-  startScreen.classList.add("hidden");
-  endScreen.classList.add("hidden");
+  startOverlay.classList.add("hidden");
+  endOverlay.classList.add("hidden");
   gameUI.classList.remove("hidden");
 
+  incrementPlayCount();
   resizeCanvas();
   nextRound();
 }
@@ -111,21 +137,136 @@ function nextRound() {
 
 function endGame() {
   gameUI.classList.add("hidden");
-  endScreen.classList.remove("hidden");
 
-  // Score is percentage of max possible (each round max = 1.0 at hardest, 0.5 at easiest)
-  const pct = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
-  finalScore.textContent  = pct;
-  finalGrade.textContent  = gradeMessage(pct);
-  finalDetail.textContent = `${correctCount} correct · ${wrongCount} missed`;
+  const pct        = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
+  const isNewBest  = saveBestScore(pct);
+
+  // Build and display the score card preview
+  renderScoreCardPreview(pct, isNewBest);
+
+  if (isNewBest) {
+    newRecordBadge.classList.remove("hidden");
+    bestScoreEnd.classList.add("hidden");
+  } else {
+    newRecordBadge.classList.add("hidden");
+    bestScoreEnd.classList.remove("hidden");
+    endBestValue.textContent = Math.round(getBestScore()) + " / 100";
+  }
+
+  endOverlay.classList.remove("hidden");
 }
 
-function gradeMessage(pct) {
-  if (pct >= 85) return "Exceptional — almost inhuman.";
-  if (pct >= 65) return "Sharp eyes. Well done.";
-  if (pct >= 45) return "Solid. Respectable perception.";
-  if (pct >= 25) return "Room to improve.";
-  return "The shades were cruel. Try again.";
+// ── Score card ────────────────────────────────────────────────
+// Builds an off-screen canvas with the shareable score graphic.
+function buildScoreCard(pct) {
+  const W = 800, H = 420;
+  const c = document.createElement("canvas");
+  c.width  = W;
+  c.height = H;
+  const cx = c.getContext("2d");
+
+  // Background — subtle tint from the last round's hue
+  const bg = cx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, `hsl(${lastHue}, 18%, 8%)`);
+  bg.addColorStop(1, `hsl(${lastHue}, 12%, 5%)`);
+  cx.fillStyle = bg;
+  cx.fillRect(0, 0, W, H);
+
+  // Outer border
+  cx.strokeStyle = "rgba(255,255,255,0.07)";
+  cx.lineWidth = 1;
+  cx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+  // Logo / label
+  cx.font = "700 11px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "rgba(255,255,255,0.28)";
+  cx.textAlign = "center";
+  cx.textBaseline = "top";
+  cx.fillText("SHADE LINE", W / 2, 32);
+
+  // Score number
+  cx.font = "800 120px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "#ffffff";
+  cx.textBaseline = "middle";
+  cx.fillText(String(pct), W / 2, H / 2 - 18);
+
+  // "/100" label
+  cx.font = "400 18px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "rgba(255,255,255,0.28)";
+  cx.fillText("out of 100", W / 2, H / 2 + 64);
+
+  // Grade
+  cx.font = "400 17px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "rgba(255,255,255,0.55)";
+  cx.fillText(gradeMessage(pct), W / 2, H / 2 + 96);
+
+  // Round stats
+  cx.font = "400 13px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "rgba(255,255,255,0.22)";
+  cx.fillText(correctCount + " correct · " + wrongCount + " missed · 20 rounds", W / 2, H - 44);
+
+  // URL hint
+  cx.font = "400 11px system-ui, -apple-system, sans-serif";
+  cx.fillStyle = "rgba(255,255,255,0.14)";
+  cx.fillText(window.location.hostname || "shade-line", W / 2, H - 22);
+
+  return c;
+}
+
+// Draws the score card into the visible preview canvas in the end overlay.
+function renderScoreCardPreview(pct) {
+  const card = buildScoreCard(pct);
+  // Match the preview canvas resolution to the card
+  scoreCardCanvas.width  = card.width;
+  scoreCardCanvas.height = card.height;
+  scoreCardCanvas.getContext("2d").drawImage(card, 0, 0);
+}
+
+// Copy score card PNG to clipboard.
+async function copyScoreCard() {
+  const pct  = parseInt(scoreCardCanvas.getContext("2d") ? scoreCardCanvas.width : 0);
+  const card = buildScoreCard(
+    Math.round((totalPoints / TOTAL_ROUNDS) * 100)
+  );
+  card.toBlob(async (blob) => {
+    if (!blob) return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      flashBtn(copyCardBtn, "Copied ✓");
+    } catch {
+      // Clipboard API unavailable — fall back to download
+      triggerDownload(card);
+      flashBtn(copyCardBtn, "Saved instead");
+    }
+  }, "image/png");
+}
+
+// Download score card as PNG.
+function downloadScoreCard() {
+  triggerDownload(
+    buildScoreCard(Math.round((totalPoints / TOTAL_ROUNDS) * 100))
+  );
+}
+
+function triggerDownload(cardCanvas) {
+  const score = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
+  const a = document.createElement("a");
+  a.download = `shade-line-${score}.png`;
+  a.href = cardCanvas.toDataURL("image/png");
+  a.click();
+}
+
+function flashBtn(btn, msg) {
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = msg;
+  btn.disabled = true;
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2200);
+}
+
+// Hide copy button if Clipboard API with images is not supported.
+if (!window.ClipboardItem || !navigator.clipboard) {
+  copyCardBtn.style.display = "none";
 }
 
 // ── Round generation ──────────────────────────────────────────
@@ -138,7 +279,8 @@ function generateRound() {
   const lightBase  = 35 + Math.random() * 28;  // 35–63%
   const delta      = shadeDelta();
 
-  // Randomly decide which side is lighter
+  lastHue = hue; // track for score card background
+
   const flip   = Math.random() < 0.5;
   const lightL = lightBase + (flip ? 0 : delta);
   const lightR = lightBase + (flip ? delta : 0);
@@ -146,7 +288,6 @@ function generateRound() {
   const colorL = `hsl(${hue.toFixed(1)},${saturation.toFixed(1)}%,${lightL.toFixed(1)}%)`;
   const colorR = `hsl(${hue.toFixed(1)},${saturation.toFixed(1)}%,${lightR.toFixed(1)}%)`;
 
-  // lineX: horizontal position of the dividing boundary (20%–80% of width)
   const margin = 0.20;
   const lineX  = (margin + Math.random() * (1 - 2 * margin)) * W;
 
@@ -155,14 +296,13 @@ function generateRound() {
 
 // ── Drawing ───────────────────────────────────────────────────
 
-// Draw the two shaded regions with a soft gradient blend at the boundary.
-// No hard edge — the two shades simply meet each other.
+// Draw the two shaded regions. The boundary is a soft gradient — no hard edge.
 function drawRound(r) {
   const { W, H, colorL, colorR, lineX } = r;
 
   const grad = ctx.createLinearGradient(0, 0, W, 0);
-  const t0 = Math.max(0, (lineX - BLEND_WIDTH) / W);
-  const t1 = Math.min(1, (lineX + BLEND_WIDTH) / W);
+  const t0   = Math.max(0, (lineX - BLEND_WIDTH) / W);
+  const t1   = Math.min(1, (lineX + BLEND_WIDTH) / W);
   grad.addColorStop(0,  colorL);
   grad.addColorStop(t0, colorL);
   grad.addColorStop(t1, colorR);
@@ -172,20 +312,18 @@ function drawRound(r) {
   ctx.fillRect(0, 0, W, H);
 }
 
-// Draw the reveal overlay (called after the player clicks).
-// Result color (green/red) stays OFF the canvas — it lives in the border glow
-// and the feedback bar. The canvas only shows neutral white markers so they
-// read clearly regardless of the shade hue underneath.
+// Draw the reveal overlay after the player clicks.
+// Result colour lives in the border glow + feedback bar — NOT as a canvas fill tint.
 function drawReveal(r, clickX, isHit) {
   const { W, H, lineX } = r;
   const tol  = tolerance();
   const dist = Math.abs(clickX - lineX);
 
-  // 1 — Tolerance band: very faint white strip showing the accepted zone
+  // Tolerance zone — very faint white band
   ctx.fillStyle = "rgba(255,255,255,0.07)";
   ctx.fillRect(lineX - tol, 0, tol * 2, H);
 
-  // 2 — Player's click line (wrong only — dashed white)
+  // Player's click line (miss only)
   if (!isHit) {
     ctx.save();
     ctx.strokeStyle = "rgba(255,255,255,0.38)";
@@ -198,7 +336,7 @@ function drawReveal(r, clickX, isHit) {
     ctx.restore();
   }
 
-  // 3 — True line: solid white, thin, subtle glow — neutral, no green/red here
+  // True line — neutral white, works on any hue background
   ctx.save();
   ctx.shadowColor = "rgba(255,255,255,0.45)";
   ctx.shadowBlur  = 8;
@@ -211,7 +349,7 @@ function drawReveal(r, clickX, isHit) {
   ctx.stroke();
   ctx.restore();
 
-  // 4 — Badges: small pill labels, dark bg so they float over any shade color
+  // Badges
   if (isHit) {
     const label = dist <= tol * 0.3 ? "✓  Perfect" : "✓  Correct";
     drawCenteredBadge(W / 2, H * 0.08, label, "#4ade80", "rgba(0,0,0,0.70)");
@@ -222,11 +360,10 @@ function drawReveal(r, clickX, isHit) {
     drawLineBadge(midX, H * 0.63, `${Math.round(dist)} px off`, "#e0c070", "rgba(0,0,0,0.65)", W);
   }
 
-  // 5 — Add colored glow to the canvas border (via CSS class on the wrapper)
+  // Border glow via CSS class
   document.getElementById("canvas-wrapper").classList.add(isHit ? "reveal-hit" : "reveal-miss");
 }
 
-// Centered badge (for the top-of-canvas result label)
 function drawCenteredBadge(cx, y, text, textColor, bgColor) {
   ctx.save();
   ctx.font         = "700 13px system-ui, -apple-system, sans-serif";
@@ -234,47 +371,34 @@ function drawCenteredBadge(cx, y, text, textColor, bgColor) {
   ctx.textAlign    = "center";
   const pad = 12;
   const tw  = ctx.measureText(text).width;
-  const bw  = tw + pad * 2;
-  const bh  = 28;
   ctx.fillStyle = bgColor;
-  roundRect(cx - bw / 2, y - bh / 2, bw, bh, 7);
+  rrect(cx - (tw + pad * 2) / 2, y - 14, tw + pad * 2, 28, 7);
   ctx.fill();
   ctx.fillStyle = textColor;
   ctx.fillText(text, cx, y);
   ctx.restore();
 }
 
-// Draw a small pill label anchored to an x position, flipped if too close to an edge.
 function drawLineBadge(anchorX, y, text, textColor, bgColor, canvasW) {
   ctx.save();
   ctx.font         = "600 13px system-ui, -apple-system, sans-serif";
   ctx.textBaseline = "middle";
   ctx.textAlign    = "left";
-
   const pad = 9;
   const tw  = ctx.measureText(text).width;
   const bw  = tw + pad * 2;
   const bh  = 26;
-
-  // Place label to the right of the anchor; flip left if it would overflow
-  const rightX = anchorX + 10;
-  const leftX  = anchorX - bw - 10;
-  const bx     = (rightX + bw < canvasW - 8) ? rightX : leftX;
-  const by     = y - bh / 2;
-
-  // Background pill
+  const bx  = (anchorX + 10 + bw < canvasW - 8) ? anchorX + 10 : anchorX - bw - 10;
   ctx.fillStyle = bgColor;
-  roundRect(bx, by, bw, bh, 6);
+  rrect(bx, y - bh / 2, bw, bh, 6);
   ctx.fill();
-
-  // Text
   ctx.fillStyle = textColor;
   ctx.fillText(text, bx + pad, y);
   ctx.restore();
 }
 
-// Cross-browser rounded rect path helper (avoids ctx.roundRect which is newer).
-function roundRect(x, y, w, h, r) {
+// Cross-browser rounded rect path (avoids ctx.roundRect which is newer).
+function rrect(x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y,     x + w, y + h, r);
@@ -290,8 +414,7 @@ canvas.addEventListener("touchend", (e) => {
   e.preventDefault();
   const t    = e.changedTouches[0];
   const rect = canvas.getBoundingClientRect();
-  // Convert touch position to CSS-pixel canvas space
-  const cx = (t.clientX - rect.left) * (cssW() / rect.width);
+  const cx   = (t.clientX - rect.left) * (cssW() / rect.width);
   handleGuess(cx);
 }, { passive: false });
 
@@ -306,10 +429,10 @@ function handleGuess(cx) {
   waiting = true;
 
   const { lineX } = currentRound;
-  const tol   = tolerance();
-  const dist  = Math.abs(cx - lineX);
-  const isHit = dist <= tol;
-  const pts   = calcPoints(dist, tol);
+  const tol    = tolerance();
+  const dist   = Math.abs(cx - lineX);
+  const isHit  = dist <= tol;
+  const pts    = calcPoints(dist, tol);
 
   totalPoints  += pts;
   if (isHit) correctCount++; else wrongCount++;
@@ -328,22 +451,25 @@ function handleGuess(cx) {
 }
 
 // ── Scoring ───────────────────────────────────────────────────
-// Each round yields 0–1 point.
-// Weight = 0.5 at min difficulty, 1.0 at max difficulty.
-// Proximity factor = smooth curve from 1 (exact) to 0 (at tolerance boundary).
 function calcPoints(dist, tol) {
   const norm = dist / tol;
   if (norm > 1) return 0;
-  const proximity   = Math.pow(1 - norm, 1.4);
-  const diffWeight  = 0.5 + difficulty * 0.5;
+  const proximity  = Math.pow(1 - norm, 1.4);
+  const diffWeight = 0.5 + difficulty * 0.5;
   return proximity * diffWeight;
+}
+
+function gradeMessage(pct) {
+  if (pct >= 85) return "Exceptional — almost inhuman.";
+  if (pct >= 65) return "Sharp eyes. Well done.";
+  if (pct >= 45) return "Solid. Respectable perception.";
+  if (pct >= 25) return "Room to improve.";
+  return "The shades were cruel. Try again.";
 }
 
 // ── HUD & Feedback ────────────────────────────────────────────
 function updateHUD() {
   roundDisplay.textContent = `Round ${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
-  // Show score as percentage of max possible so far
-  const maxSoFar = (round - (waiting ? 0 : 0)); // keeps updating
   scoreDisplay.textContent = `Score: ${Math.round((totalPoints / TOTAL_ROUNDS) * 100)}`;
 }
 
@@ -351,13 +477,11 @@ function clearFeedback() {
   feedbackText.textContent = "\u00a0";
   feedbackText.className   = "";
   feedbackBar.className    = "";
-  const wrapper = document.getElementById("canvas-wrapper");
-  wrapper.classList.remove("reveal-hit", "reveal-miss");
+  document.getElementById("canvas-wrapper").classList.remove("reveal-hit", "reveal-miss");
 }
 
 function showFeedback(dist, tol, isHit) {
   let msg, cls;
-
   if (!isHit) {
     msg = `Missed  —  ${Math.round(dist)} px off`;
     cls = "miss";
@@ -371,32 +495,23 @@ function showFeedback(dist, tol, isHit) {
     msg = "Close enough!";
     cls = "ok";
   }
-
   feedbackText.textContent = msg;
   feedbackText.className   = cls;
-  feedbackBar.className    = cls; // tints the bar background too
+  feedbackBar.className    = cls;
 }
 
 // ── Canvas helpers ────────────────────────────────────────────
-// Return canvas dimensions in CSS (logical) pixels.
-function cssW() {
-  return canvas.width / (window.devicePixelRatio || 1);
-}
-function cssH() {
-  return canvas.height / (window.devicePixelRatio || 1);
-}
+function cssW() { return canvas.width  / (window.devicePixelRatio || 1); }
+function cssH() { return canvas.height / (window.devicePixelRatio || 1); }
 
-// ── Canvas sizing ─────────────────────────────────────────────
 function resizeCanvas() {
   const wrapper = document.getElementById("canvas-wrapper");
   const rect    = wrapper.getBoundingClientRect();
   const dpr     = window.devicePixelRatio || 1;
-
-  canvas.width  = Math.round(rect.width  * dpr);
-  canvas.height = Math.round(rect.height * dpr);
+  canvas.width        = Math.round(rect.width  * dpr);
+  canvas.height       = Math.round(rect.height * dpr);
   canvas.style.width  = rect.width  + "px";
   canvas.style.height = rect.height + "px";
-
   ctx.scale(dpr, dpr);
 }
 
@@ -409,3 +524,15 @@ window.addEventListener("resize", () => {
     drawRound(currentRound);
   }
 });
+
+// ── Event listeners ───────────────────────────────────────────
+startBtn.addEventListener("click", startGame);
+
+document.getElementById("restart-btn").addEventListener("click", startGame);
+
+copyCardBtn.addEventListener("click", copyScoreCard);
+
+downloadCardBtn.addEventListener("click", downloadScoreCard);
+
+// ── Init ──────────────────────────────────────────────────────
+updateStartBest();
