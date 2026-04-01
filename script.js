@@ -18,6 +18,7 @@ const endGradeMessage  = document.getElementById("end-grade-message");
 const endCorrectValue  = document.getElementById("end-correct-value");
 const endMissedValue   = document.getElementById("end-missed-value");
 const endRoundsValue   = document.getElementById("end-rounds-value");
+const endDeValue       = document.getElementById("end-de-value");
 const scoreCardCanvas  = document.getElementById("score-card-canvas");
 const shareChallengeBtn = document.getElementById("share-challenge-btn");
 const copyCardBtn      = document.getElementById("copy-card-btn");
@@ -27,11 +28,12 @@ const canvas           = document.getElementById("game-canvas");
 const ctx              = canvas.getContext("2d");
 const roundDisplay     = document.getElementById("round-display");
 const scoreDisplay     = document.getElementById("score-display");
+const deltaDisplay     = document.getElementById("delta-display");
 const feedbackText     = document.getElementById("feedback-text");
 const feedbackBar      = document.getElementById("feedback-bar");
 
 // ── Constants ─────────────────────────────────────────────────
-const TOTAL_ROUNDS    = 20;
+const TOTAL_ROUNDS    = 30;
 const REVEAL_DURATION = 1100; // ms to show the reveal before advancing
 
 // Lightness delta between the two shade regions.
@@ -47,9 +49,9 @@ const BLEND_WIDTH = 3;
 // ── Game state ────────────────────────────────────────────────
 let round        = 0;
 let difficulty   = 0.48;
-let totalPoints  = 0;
 let correctCount = 0;
 let wrongCount   = 0;
+let bestDe       = Infinity; // smallest ΔE the player correctly identified (their JND)
 let waiting      = false;
 let currentRound = null;
 let lastHue      = 220; // tracked for the score card background tint
@@ -60,13 +62,13 @@ let streak = 0;
 function updateDifficulty(wasHit) {
   // Every correct answer pushes difficulty up; a miss pulls it back.
   difficulty = wasHit
-    ? Math.min(1, difficulty + 0.035)
-    : Math.max(0, difficulty - 0.05);
+    ? Math.min(1, difficulty + 0.022)
+    : Math.max(0, difficulty - 0.04);
 
   // Streak bonus: 4 correct in a row → extra nudge up
   streak = wasHit ? Math.max(0, streak) + 1 : Math.min(0, streak) - 1;
   if (streak >= 4) {
-    difficulty = Math.min(1, difficulty + 0.03);
+    difficulty = Math.min(1, difficulty + 0.018);
     streak = 0;
   } else if (streak <= -3) {
     difficulty = Math.max(0, difficulty - 0.08);
@@ -128,7 +130,7 @@ function shouldAutoStart() {
 function updateStartBest() {
   const best = getBestScore();
   if (best > 0 && startBestBanner) {
-    startBestValue.textContent = Math.round(best) + " / 100";
+    startBestValue.textContent = Math.round(best) + "%";
     startBestBanner.classList.remove("hidden");
   }
 }
@@ -142,7 +144,7 @@ function configureChallengePrompt() {
   }
 
   startSub.textContent = "A friend challenged you.";
-  challengeMessage.textContent = `Their score was ${challengeScore} / 100. Can you do better?`;
+  challengeMessage.textContent = `Their accuracy was ${challengeScore}%. Can you do better?`;
   challengeMessage.classList.remove("hidden");
   startBestBanner.classList.add("hidden");
   startBtn.textContent = "Start Challenge";
@@ -157,9 +159,9 @@ function buildChallengeURL(score) {
 }
 
 async function shareChallenge() {
-  const score = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
+  const score = Math.round((correctCount / TOTAL_ROUNDS) * 100);
   const url   = buildChallengeURL(score);
-  const text  = `My score was ${score}/100. Can you do better?`;
+  const text  = `My accuracy was ${score}%. Can you do better?`;
 
   try {
     if (navigator.share) {
@@ -190,9 +192,9 @@ function startGame() {
   round        = 0;
   // Repeat plays still start a bit harder, but ramp more gently.
   difficulty   = Math.min(0.68, 0.48 + getPlayCount() * 0.01);
-  totalPoints  = 0;
   correctCount = 0;
   wrongCount   = 0;
+  bestDe       = Infinity;
   waiting      = false;
   currentRound = null;
   streak       = 0;
@@ -209,26 +211,26 @@ function startGame() {
 function nextRound() {
   round++;
   waiting = false;
-  updateHUD();
   clearFeedback();
   currentRound = generateRound();
+  updateHUD();
   drawRound(currentRound);
 }
 
 function endGame() {
   gameUI.classList.add("hidden");
 
-  const pct        = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
-  const isNewBest  = saveBestScore(pct);
+  const acc       = Math.round((correctCount / TOTAL_ROUNDS) * 100);
+  const isNewBest = saveBestScore(acc);
 
-  endScoreValue.textContent   = String(pct);
-  endGradeMessage.textContent = gradeMessage(pct);
+  endScoreValue.textContent   = String(acc);
+  endGradeMessage.textContent = gradeMessage(acc);
   endCorrectValue.textContent = String(correctCount);
   endMissedValue.textContent  = String(wrongCount);
   endRoundsValue.textContent  = String(TOTAL_ROUNDS);
+  endDeValue.textContent      = bestDe === Infinity ? "—" : bestDe.toFixed(4);
 
-  // Keep the score card available for copy/download, but do not show it as the main UI.
-  renderScoreCardPreview(pct);
+  renderScoreCardPreview(acc);
 
   if (isNewBest) {
     newRecordBadge.classList.remove("hidden");
@@ -236,7 +238,7 @@ function endGame() {
   } else {
     newRecordBadge.classList.add("hidden");
     bestScoreEnd.classList.remove("hidden");
-    endBestValue.textContent = Math.round(getBestScore()) + " / 100";
+    endBestValue.textContent = Math.round(getBestScore()) + "%";
   }
 
   endOverlay.classList.remove("hidden");
@@ -244,7 +246,7 @@ function endGame() {
 
 // ── Score card ────────────────────────────────────────────────
 // Builds an off-screen canvas with the shareable score graphic.
-function buildScoreCard(pct) {
+function buildScoreCard(acc) {
   const W = 800, H = 420;
   const c = document.createElement("canvas");
   c.width  = W;
@@ -270,26 +272,27 @@ function buildScoreCard(pct) {
   cx.textBaseline = "top";
   cx.fillText("SHADE LINE", W / 2, 32);
 
-  // Score number
+  // Accuracy number
   cx.font = "800 120px system-ui, -apple-system, sans-serif";
   cx.fillStyle = "#ffffff";
   cx.textBaseline = "middle";
-  cx.fillText(String(pct), W / 2, H / 2 - 18);
+  cx.fillText(String(acc) + "%", W / 2, H / 2 - 18);
 
-  // "/100" label
+  // Difference (JND)
   cx.font = "400 18px system-ui, -apple-system, sans-serif";
   cx.fillStyle = "rgba(255,255,255,0.28)";
-  cx.fillText("out of 100", W / 2, H / 2 + 64);
+  const deCardLabel = bestDe === Infinity ? "—" : "Difference " + bestDe.toFixed(4);
+  cx.fillText(deCardLabel, W / 2, H / 2 + 64);
 
   // Grade
   cx.font = "400 17px system-ui, -apple-system, sans-serif";
   cx.fillStyle = "rgba(255,255,255,0.55)";
-  cx.fillText(gradeMessage(pct), W / 2, H / 2 + 96);
+  cx.fillText(gradeMessage(acc), W / 2, H / 2 + 96);
 
   // Round stats
   cx.font = "400 13px system-ui, -apple-system, sans-serif";
   cx.fillStyle = "rgba(255,255,255,0.22)";
-  cx.fillText(correctCount + " correct · " + wrongCount + " missed · 20 rounds", W / 2, H - 44);
+  cx.fillText(correctCount + " correct · " + wrongCount + " missed · " + TOTAL_ROUNDS + " rounds", W / 2, H - 44);
 
   // URL hint
   cx.font = "400 11px system-ui, -apple-system, sans-serif";
@@ -300,8 +303,8 @@ function buildScoreCard(pct) {
 }
 
 // Draws the score card into the visible preview canvas in the end overlay.
-function renderScoreCardPreview(pct) {
-  const card = buildScoreCard(pct);
+function renderScoreCardPreview(acc) {
+  const card = buildScoreCard(acc);
   // Match the preview canvas resolution to the card
   scoreCardCanvas.width  = card.width;
   scoreCardCanvas.height = card.height;
@@ -310,10 +313,7 @@ function renderScoreCardPreview(pct) {
 
 // Copy score card PNG to clipboard.
 async function copyScoreCard() {
-  const pct  = parseInt(scoreCardCanvas.getContext("2d") ? scoreCardCanvas.width : 0);
-  const card = buildScoreCard(
-    Math.round((totalPoints / TOTAL_ROUNDS) * 100)
-  );
+  const card = buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100));
   card.toBlob(async (blob) => {
     if (!blob) return;
     try {
@@ -330,12 +330,12 @@ async function copyScoreCard() {
 // Download score card as PNG.
 function downloadScoreCard() {
   triggerDownload(
-    buildScoreCard(Math.round((totalPoints / TOTAL_ROUNDS) * 100))
+    buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100))
   );
 }
 
 function triggerDownload(cardCanvas) {
-  const score = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
+  const score = Math.round((correctCount / TOTAL_ROUNDS) * 100);
   const a = document.createElement("a");
   a.download = `shade-line-${score}.png`;
   a.href = cardCanvas.toDataURL("image/png");
@@ -353,6 +353,40 @@ function flashBtn(btn, msg) {
 // Hide copy button if Clipboard API with images is not supported.
 if (!window.ClipboardItem || !navigator.clipboard) {
   copyCardBtn.style.display = "none";
+}
+
+// ── Perceptual color difference (ΔE, Oklab) ───────────────────
+// Converts HSL (h: 0–360, s/l: 0–100) → sRGB (0–1)
+function hslToRGB(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  };
+  return [f(0), f(8), f(4)];
+}
+
+// sRGB (0–1) → Oklab {L, a, b}
+function srgbToOklab(r, g, b) {
+  const lin = (c) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const rl = lin(r), gl = lin(g), bl = lin(b);
+  const l = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
+  const m = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
+  const s = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
+  const l_ = Math.cbrt(l), m_ = Math.cbrt(m), s_ = Math.cbrt(s);
+  return {
+    L: 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_,
+    a: 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_,
+    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+  };
+}
+
+function calcDeltaE(h, sat, lL, lR) {
+  const lab1 = srgbToOklab(...hslToRGB(h, sat, lL));
+  const lab2 = srgbToOklab(...hslToRGB(h, sat, lR));
+  const dL = lab1.L - lab2.L, da = lab1.a - lab2.a, db = lab1.b - lab2.b;
+  return Math.sqrt(dL * dL + da * da + db * db);
 }
 
 // ── Round generation ──────────────────────────────────────────
@@ -376,8 +410,9 @@ function generateRound() {
 
   const margin = 0.20;
   const lineX  = (margin + Math.random() * (1 - 2 * margin)) * W;
+  const de     = calcDeltaE(hue, saturation, lightL, lightR);
 
-  return { W, H, colorL, colorR, lineX };
+  return { W, H, colorL, colorR, lineX, de };
 }
 
 // ── Drawing ───────────────────────────────────────────────────
@@ -518,10 +553,9 @@ function handleGuess(cx) {
   const tol    = tolerance();
   const dist   = Math.abs(cx - lineX);
   const isHit  = dist <= tol;
-  const pts    = calcPoints(dist, tol);
 
-  totalPoints  += pts;
-  if (isHit) correctCount++; else wrongCount++;
+  if (isHit) { correctCount++; bestDe = Math.min(bestDe, currentRound.de); }
+  else wrongCount++;
 
   updateDifficulty(isHit);
   showFeedback(dist, tol, isHit);
@@ -536,15 +570,6 @@ function handleGuess(cx) {
   }, REVEAL_DURATION);
 }
 
-// ── Scoring ───────────────────────────────────────────────────
-function calcPoints(dist, tol) {
-  const norm = dist / tol;
-  if (norm > 1) return 0;
-  const proximity  = Math.pow(1 - norm, 1.4);
-  const diffWeight = 0.5 + difficulty * 0.5;
-  return proximity * diffWeight;
-}
-
 function gradeMessage(pct) {
   if (pct >= 85) return "Exceptional — almost inhuman.";
   if (pct >= 65) return "Sharp eyes. Well done.";
@@ -556,7 +581,12 @@ function gradeMessage(pct) {
 // ── HUD & Feedback ────────────────────────────────────────────
 function updateHUD() {
   roundDisplay.textContent = `Round ${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
-  scoreDisplay.textContent = `Score: ${Math.round((totalPoints / TOTAL_ROUNDS) * 100)}`;
+  scoreDisplay.textContent = round > 1
+    ? `Acc: ${Math.round((correctCount / (round - 1)) * 100)}%`
+    : `Acc: —`;
+  if (deltaDisplay && currentRound) {
+    deltaDisplay.textContent = `Diff ${currentRound.de.toFixed(4)}`;
+  }
 }
 
 function clearFeedback() {
@@ -595,11 +625,18 @@ function resizeCanvas() {
   const rect    = wrapper.getBoundingClientRect();
   if (!rect.width || !rect.height) return false;
 
+  const cs   = getComputedStyle(wrapper);
+  const padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padV = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+  const w    = rect.width  - padH;
+  const h    = rect.height - padV;
+  if (!w || !h) return false;
+
   const dpr     = window.devicePixelRatio || 1;
-  canvas.width        = Math.round(rect.width  * dpr);
-  canvas.height       = Math.round(rect.height * dpr);
-  canvas.style.width  = rect.width  + "px";
-  canvas.style.height = rect.height + "px";
+  canvas.width        = Math.round(w * dpr);
+  canvas.height       = Math.round(h * dpr);
+  canvas.style.width  = w + "px";
+  canvas.style.height = h + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return true;
 }

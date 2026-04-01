@@ -39,12 +39,7 @@
           identical shades. Your job is to click exactly where they meet.
         </p>
 
-        <!-- Best score — shown only if localStorage has a value (set by inline script below) -->
-        <div id="best-score-landing" class="best-score-banner hidden" aria-live="polite">
-          Personal best: <strong id="landing-best-value">—</strong>
-        </div>
-
-        <a href="game.html?autostart=1" class="btn-primary btn-large" role="button">Test Your Vision →</a>
+        <a href="game.html?autostart=1" class="btn-primary btn-large btn-cta" role="button">Find the line</a>
         <p class="hero-disclaimer">Free · No signup · 20 rounds</p>
       </div>
 
@@ -79,16 +74,6 @@
     <span class="footer-copy">A color perception test. Free to play. <a href="privacy.html">Privacy Policy</a></span>
   </footer>
 
-  <!-- Inline: show best score from localStorage without a flash -->
-  <script>
-    (function () {
-      var best = parseFloat(localStorage.getItem('sl_best') || '0');
-      if (best > 0) {
-        document.getElementById('landing-best-value').textContent = Math.round(best) + ' / 100';
-        document.getElementById('best-score-landing').classList.remove('hidden');
-      }
-    }());
-  </script>
 
 </body>
 </html>

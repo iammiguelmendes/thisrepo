@@ -22,7 +22,10 @@
   <!-- ── Fixed Header ── -->
   <header id="site-header">
     <a href="index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
-    <div id="round-display" class="header-round" aria-live="polite" aria-atomic="true">Round 1 / 20</div>
+    <div class="header-center">
+      <div id="round-display" aria-live="polite" aria-atomic="true">Round 1 / 30</div>
+      <span id="delta-display" aria-label="Color difference"></span>
+    </div>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="game.html" aria-current="page">Play</a>
       <a href="about.html" class="nav-about">About</a>
@@ -52,7 +55,7 @@
         <h2 id="end-title" class="end-title">Shade Line</h2>
 
         <div class="end-score-block" aria-live="polite">
-          <div class="end-score-value"><span id="end-score-value">0</span><span class="end-score-total">/ 100</span></div>
+          <div class="end-score-value"><span id="end-score-value">0</span><span class="end-score-total">%</span></div>
           <p id="end-grade-message" class="end-grade-message">Solid. Respectable perception.</p>
         </div>
 
@@ -73,6 +76,10 @@
           <div class="end-stat">
             <span class="end-stat-label">Rounds</span>
             <strong id="end-rounds-value" class="end-stat-value">20</strong>
+          </div>
+          <div class="end-stat end-stat--wide">
+            <span class="end-stat-label">Difference</span>
+            <strong id="end-de-value" class="end-stat-value">—</strong>
           </div>
         </div>
 
