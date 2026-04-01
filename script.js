@@ -7,6 +7,8 @@ const startOverlay     = document.getElementById("start-overlay");
 const startBtn         = document.getElementById("start-btn");
 const startBestBanner  = document.getElementById("start-best-banner");
 const startBestValue   = document.getElementById("start-best-value");
+const startSub         = document.querySelector(".start-sub");
+const challengeMessage = document.getElementById("challenge-message");
 const endOverlay       = document.getElementById("end-overlay");
 const newRecordBadge   = document.getElementById("new-record-badge");
 const bestScoreEnd     = document.getElementById("best-score-end");
@@ -17,6 +19,7 @@ const endCorrectValue  = document.getElementById("end-correct-value");
 const endMissedValue   = document.getElementById("end-missed-value");
 const endRoundsValue   = document.getElementById("end-rounds-value");
 const scoreCardCanvas  = document.getElementById("score-card-canvas");
+const shareChallengeBtn = document.getElementById("share-challenge-btn");
 const copyCardBtn      = document.getElementById("copy-card-btn");
 const downloadCardBtn  = document.getElementById("download-card-btn");
 const gameUI           = document.getElementById("game-ui");
@@ -43,7 +46,7 @@ const BLEND_WIDTH = 3;
 
 // ── Game state ────────────────────────────────────────────────
 let round        = 0;
-let difficulty   = 0.64;
+let difficulty   = 0.48;
 let totalPoints  = 0;
 let correctCount = 0;
 let wrongCount   = 0;
@@ -57,13 +60,13 @@ let streak = 0;
 function updateDifficulty(wasHit) {
   // Every correct answer pushes difficulty up; a miss pulls it back.
   difficulty = wasHit
-    ? Math.min(1, difficulty + 0.02)
+    ? Math.min(1, difficulty + 0.035)
     : Math.max(0, difficulty - 0.05);
 
-  // Streak bonus: 5 correct in a row → extra nudge up
+  // Streak bonus: 4 correct in a row → extra nudge up
   streak = wasHit ? Math.max(0, streak) + 1 : Math.min(0, streak) - 1;
-  if (streak >= 5) {
-    difficulty = Math.min(1, difficulty + 0.02);
+  if (streak >= 4) {
+    difficulty = Math.min(1, difficulty + 0.03);
     streak = 0;
   } else if (streak <= -3) {
     difficulty = Math.max(0, difficulty - 0.08);
@@ -100,9 +103,25 @@ function incrementPlayCount() {
   localStorage.setItem("sl_plays", String(getPlayCount() + 1));
 }
 
+function getChallengeScore() {
+  const raw = new URLSearchParams(window.location.search).get("challenge");
+  if (raw === null) return null;
+  if (!/^\d{1,3}$/.test(raw)) return "invalid";
+
+  const score = Number(raw);
+  if (!Number.isInteger(score) || score < 0 || score > 100) return "invalid";
+
+  return score;
+}
+
+function goTo404() {
+  const target = new URL("/404.html", window.location.origin);
+  window.location.replace(target.toString());
+}
+
 function shouldAutoStart() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("autostart") === "1";
+  return params.get("autostart") === "1" && getChallengeScore() === null;
 }
 
 // ── Start overlay best-score display ─────────────────────────
@@ -114,11 +133,63 @@ function updateStartBest() {
   }
 }
 
+function configureChallengePrompt() {
+  const challengeScore = getChallengeScore();
+  if (challengeScore === null) return;
+  if (challengeScore === "invalid") {
+    goTo404();
+    return;
+  }
+
+  startSub.textContent = "A friend challenged you.";
+  challengeMessage.textContent = `Their score was ${challengeScore} / 100. Can you do better?`;
+  challengeMessage.classList.remove("hidden");
+  startBestBanner.classList.add("hidden");
+  startBtn.textContent = "Start Challenge";
+}
+
+function buildChallengeURL(score) {
+  const safeScore = Math.max(0, Math.min(100, Math.round(score)));
+  if (window.location.protocol === "file:") {
+    return new URL(`./play/index.html?challenge=${safeScore}`, window.location.href).toString();
+  }
+  return new URL(`/play?challenge=${safeScore}`, window.location.origin).toString();
+}
+
+async function shareChallenge() {
+  const score = Math.round((totalPoints / TOTAL_ROUNDS) * 100);
+  const url   = buildChallengeURL(score);
+  const text  = `My score was ${score}/100. Can you do better?`;
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "Shade Line Challenge", text, url });
+      flashBtn(shareChallengeBtn, "Shared ✓");
+      return;
+    }
+  } catch {
+    // Fall through to clipboard/manual fallback.
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url);
+      flashBtn(shareChallengeBtn, "Link copied ✓");
+      return;
+    }
+  } catch {
+    // Fall through to manual fallback.
+  }
+
+  window.prompt("Copy this challenge link:", url);
+  flashBtn(shareChallengeBtn, "Link ready");
+}
+
 // ── Game flow ─────────────────────────────────────────────────
 function startGame() {
   round        = 0;
   // Repeat plays still start a bit harder, but ramp more gently.
-  difficulty   = Math.min(0.76, 0.64 + getPlayCount() * 0.01);
+  difficulty   = Math.min(0.68, 0.48 + getPlayCount() * 0.01);
   totalPoints  = 0;
   correctCount = 0;
   wrongCount   = 0;
@@ -548,12 +619,15 @@ startBtn.addEventListener("click", startGame);
 
 document.getElementById("restart-btn").addEventListener("click", startGame);
 
+shareChallengeBtn.addEventListener("click", shareChallenge);
+
 copyCardBtn.addEventListener("click", copyScoreCard);
 
 downloadCardBtn.addEventListener("click", downloadScoreCard);
 
 // ── Init ──────────────────────────────────────────────────────
 updateStartBest();
+configureChallengePrompt();
 
 if (shouldAutoStart()) {
   const boot = () => startGame();

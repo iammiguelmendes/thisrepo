@@ -13,26 +13,23 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="../styles.css" />
 </head>
 <body class="page-game">
 
   <a href="#game-canvas" class="skip-link">Skip to game</a>
 
-  <!-- ── Fixed Header ── -->
   <header id="site-header">
-    <a href="index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
+    <a href="../index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
     <div id="round-display" class="header-round" aria-live="polite" aria-atomic="true">Round 1 / 20</div>
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="game.html" aria-current="page">Play</a>
-      <a href="about.html" class="nav-about">About</a>
+      <a href="index.html" aria-current="page">Play</a>
+      <a href="../about.html" class="nav-about">About</a>
     </nav>
   </header>
 
-  <!-- ── Game Section ── -->
   <main id="game-section" aria-label="Game">
 
-    <!-- Start Overlay -->
     <div id="start-overlay" class="section-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
       <div class="card start-card">
         <h1 id="start-title" class="start-title">Shade Line</h1>
@@ -45,7 +42,6 @@
       </div>
     </div>
 
-    <!-- End Overlay -->
     <div id="end-overlay" class="section-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="end-title">
       <div class="card end-card">
         <p class="end-kicker">Your Results</p>
@@ -85,11 +81,10 @@
           <button id="restart-btn"       class="btn-primary"   type="button">Try Again</button>
         </div>
 
-        <a href="index.html" class="end-back-link">← Back to home</a>
+        <a href="../index.html" class="end-back-link">← Back to home</a>
       </div>
     </div>
 
-    <!-- Game UI (hidden until game starts) -->
     <div id="game-ui" class="hidden">
       <div id="hud" role="status" aria-live="polite" aria-atomic="true">
         <span id="score-display">Score: 0</span>
@@ -110,6 +105,6 @@
 
   </main>
 
-  <script src="script.js"></script>
+  <script src="../script.js"></script>
 </body>
 </html>
