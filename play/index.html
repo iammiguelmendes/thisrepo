@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Play – Shade Line</title>
-  <meta name="description" content="Test your color perception. Find the invisible boundary between two nearly identical shades — 20 adaptive rounds." />
+  <meta name="description" content="Test your color perception. Find the invisible boundary between two nearly identical shades — 30 adaptive rounds." />
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
@@ -21,9 +21,12 @@
 
   <header id="site-header">
     <a href="../index.html" class="site-logo" aria-label="Shade Line — home">Shade Line</a>
-    <div id="round-display" class="header-round" aria-live="polite" aria-atomic="true">Round 1 / 20</div>
+    <div class="header-center">
+      <div id="round-display" aria-live="polite" aria-atomic="true">Round 1 / 30</div>
+      <span id="delta-display" aria-label="Color difference"></span>
+    </div>
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="index.html" aria-current="page">Play</a>
+      <a href="index.html" class="nav-play" aria-current="page">Play</a>
       <a href="../about.html" class="nav-about">About</a>
     </nav>
   </header>
@@ -33,12 +36,12 @@
     <div id="start-overlay" class="section-overlay" role="dialog" aria-modal="true" aria-labelledby="start-title">
       <div class="card start-card">
         <h1 id="start-title" class="start-title">Shade Line</h1>
-        <p class="start-sub">20 rounds of color perception</p>
+        <p class="start-sub">30 rounds of color perception</p>
         <p id="challenge-message" class="challenge-message hidden"></p>
         <div id="start-best-banner" class="best-score-banner hidden" aria-live="polite">
           Personal best: <strong id="start-best-value">—</strong>
         </div>
-        <button id="start-btn" class="btn-primary btn-large" type="button">Start Game</button>
+        <button id="start-btn" class="btn-primary btn-large btn-cta" type="button">Find the line</button>
       </div>
     </div>
 
@@ -48,7 +51,7 @@
         <h2 id="end-title" class="end-title">Shade Line</h2>
 
         <div class="end-score-block" aria-live="polite">
-          <div class="end-score-value"><span id="end-score-value">0</span><span class="end-score-total">/ 100</span></div>
+          <div class="end-score-value"><span id="end-score-value">0</span><span class="end-score-total">%</span></div>
           <p id="end-grade-message" class="end-grade-message">Solid. Respectable perception.</p>
         </div>
 
@@ -68,17 +71,23 @@
           </div>
           <div class="end-stat">
             <span class="end-stat-label">Rounds</span>
-            <strong id="end-rounds-value" class="end-stat-value">20</strong>
+            <strong id="end-rounds-value" class="end-stat-value">30</strong>
+          </div>
+          <div class="end-stat end-stat--wide">
+            <span class="end-stat-label">Difference</span>
+            <strong id="end-de-value" class="end-stat-value">—</strong>
           </div>
         </div>
 
         <canvas id="score-card-canvas" class="score-card-preview hidden" aria-hidden="true"></canvas>
 
         <div class="end-actions" role="group" aria-label="Score card actions">
-          <button id="share-challenge-btn" class="btn-secondary" type="button">Share Challenge</button>
-          <button id="copy-card-btn"     class="btn-secondary" type="button">Copy Image</button>
-          <button id="download-card-btn" class="btn-secondary" type="button">Save PNG</button>
-          <button id="restart-btn"       class="btn-primary"   type="button">Try Again</button>
+          <div class="end-actions-secondary">
+            <button id="share-challenge-btn" class="btn-secondary" type="button">Share Challenge</button>
+            <button id="copy-card-btn"       class="btn-secondary" type="button">Copy Image</button>
+            <button id="download-card-btn"   class="btn-secondary" type="button">Save PNG</button>
+          </div>
+          <button id="restart-btn" class="btn-primary btn-cta" type="button">Try Again</button>
         </div>
 
         <a href="../index.html" class="end-back-link">← Back to home</a>

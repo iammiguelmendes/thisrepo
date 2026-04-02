@@ -55,6 +55,7 @@ let bestDe       = Infinity; // smallest ΔE the player correctly identified (th
 let waiting      = false;
 let currentRound = null;
 let lastHue      = 220; // tracked for the score card background tint
+let cachedCardBlob = null; // pre-built PNG blob for clipboard copy
 
 // ── Adaptive difficulty ───────────────────────────────────────
 let streak = 0;
@@ -194,8 +195,9 @@ function startGame() {
   difficulty   = Math.min(0.68, 0.48 + getPlayCount() * 0.01);
   correctCount = 0;
   wrongCount   = 0;
-  bestDe       = Infinity;
-  waiting      = false;
+  bestDe         = Infinity;
+  cachedCardBlob = null;
+  waiting        = false;
   currentRound = null;
   streak       = 0;
 
@@ -228,7 +230,7 @@ function endGame() {
   endCorrectValue.textContent = String(correctCount);
   endMissedValue.textContent  = String(wrongCount);
   endRoundsValue.textContent  = String(TOTAL_ROUNDS);
-  endDeValue.textContent      = bestDe === Infinity ? "—" : bestDe.toFixed(4);
+  if (endDeValue) endDeValue.textContent = bestDe === Infinity ? "—" : bestDe.toFixed(4);
 
   renderScoreCardPreview(acc);
 
@@ -305,26 +307,33 @@ function buildScoreCard(acc) {
 // Draws the score card into the visible preview canvas in the end overlay.
 function renderScoreCardPreview(acc) {
   const card = buildScoreCard(acc);
-  // Match the preview canvas resolution to the card
   scoreCardCanvas.width  = card.width;
   scoreCardCanvas.height = card.height;
   scoreCardCanvas.getContext("2d").drawImage(card, 0, 0);
+  // Pre-build blob now (no user gesture needed) so clipboard copy works instantly on click.
+  cachedCardBlob = null;
+  card.toBlob(b => { cachedCardBlob = b; }, "image/png");
 }
 
 // Copy score card PNG to clipboard.
 async function copyScoreCard() {
-  const card = buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100));
-  card.toBlob(async (blob) => {
-    if (!blob) return;
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      flashBtn(copyCardBtn, "Copied ✓");
-    } catch {
-      // Clipboard API unavailable — fall back to download
-      triggerDownload(card);
+  try {
+    if (!cachedCardBlob) throw new Error("blob not ready");
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": cachedCardBlob })]);
+    flashBtn(copyCardBtn, "Copied ✓");
+  } catch (err) {
+    console.warn("Clipboard write failed:", err.name, err.message);
+    // Fallback: open the image in a new tab — right-click → Copy Image works universally
+    if (cachedCardBlob) {
+      const url = URL.createObjectURL(cachedCardBlob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      flashBtn(copyCardBtn, "Opened — copy from tab");
+    } else {
+      triggerDownload(buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100)));
       flashBtn(copyCardBtn, "Saved instead");
     }
-  }, "image/png");
+  }
 }
 
 // Download score card as PNG.
