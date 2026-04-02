@@ -318,21 +318,19 @@ function renderScoreCardPreview(acc) {
 // Copy score card PNG to clipboard.
 async function copyScoreCard() {
   try {
-    if (!cachedCardBlob) throw new Error("blob not ready");
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": cachedCardBlob })]);
+    // Use the pre-built blob if ready; otherwise build it now via a Promise
+    // (ClipboardItem accepts a Promise, keeping the user-gesture context alive in Chrome).
+    const blobSource = cachedCardBlob
+      ? cachedCardBlob
+      : new Promise((res, rej) =>
+          buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100))
+            .toBlob(b => b ? res(b) : rej(new Error("toBlob returned null")), "image/png")
+        );
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blobSource })]);
     flashBtn(copyCardBtn, "Copied ✓");
   } catch (err) {
-    console.warn("Clipboard write failed:", err.name, err.message);
-    // Fallback: open the image in a new tab — right-click → Copy Image works universally
-    if (cachedCardBlob) {
-      const url = URL.createObjectURL(cachedCardBlob);
-      window.open(url, "_blank");
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      flashBtn(copyCardBtn, "Opened — copy from tab");
-    } else {
-      triggerDownload(buildScoreCard(Math.round((correctCount / TOTAL_ROUNDS) * 100)));
-      flashBtn(copyCardBtn, "Saved instead");
-    }
+    console.warn("Clipboard copy failed:", err.name, err.message);
+    flashBtn(copyCardBtn, "Not available");
   }
 }
 
