@@ -283,7 +283,7 @@ function buildScoreCard(acc) {
   // Difference (JND)
   cx.font = "400 18px system-ui, -apple-system, sans-serif";
   cx.fillStyle = "rgba(255,255,255,0.28)";
-  const deCardLabel = bestDe === Infinity ? "—" : "Difference " + bestDe.toFixed(4);
+  const deCardLabel = bestDe === Infinity ? "—" : "Best Difference " + bestDe.toFixed(4);
   cx.fillText(deCardLabel, W / 2, H / 2 + 64);
 
   // Grade
